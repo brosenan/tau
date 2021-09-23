@@ -42,10 +42,11 @@
      (binding? a) (cond
                     (and (binding? b)
                          (= (bound-var a) (bound-var b))) true
-                    (contains? assumptions (bound-var a)) (subset? (assumptions (bound-var a)) b assumptions)
-                    :else (->> (binding-terms a)
-                               (map #(subset? % b (assoc assumptions (bound-var a) b)))
-                               (every? identity)))
+                    (contains? assumptions (bound-var a)) (recur (assumptions (bound-var a)) b assumptions)
+                    :else (let [assumptions (assoc assumptions (bound-var a) b)]
+                            (->> (binding-terms a)
+                                 (map #(subset? % b assumptions))
+                                 (every? identity))))
      (binding? b) (->> (binding-terms b)
                        (map #(subset? a % assumptions))
                        (some identity)
@@ -53,11 +54,13 @@
      (seq? a) (and (seq? b)
                    (cond
                      (empty? a) (empty? b)
+                     (empty? b) false
                      :else (and (subset? (first a) (first b) assumptions)
                                 (recur (rest a) (rest b) assumptions))))
      (vector? a) (and (vector? b)
                       (cond
                         (empty? a) (empty? b)
+                        (empty? b) false
                         :else (and (subset? (first a) (first b) assumptions)
                                    (recur (vec (rest a)) (vec (rest b)) assumptions))))
      :else (= a b))))
