@@ -3,6 +3,9 @@
 
 (def binding-sym '%)
 (def elipsis-sym '...)
+(def int-sym 'int)
+(def float-sym 'float)
+(def string-sym 'string)
 
 (defn binding? [expr]
   (and (seq? expr)
@@ -24,6 +27,12 @@
    (subset? a b {}))
   ([a b assumptions]
    (cond
+     (and (= b int-sym)
+          (int? a)) true
+     (and (= b float-sym)
+          (float? a)) true
+     (and (= b string-sym)
+          (string? a)) true
      (and (seq? a)
           (= (count a) 2)
           (= (second a) elipsis-sym)) (subset? (first a) b assumptions)
@@ -49,10 +58,3 @@
      (vector? a) (and (vector? b)
                       (subset? (seq a) (seq b) assumptions))
      :else (= a b))))
-
-(comment (subset? '(% :n (0) (s :n ...)) '(% :k (s :k ...) (0)) {})
-         (subset? '(s (% :n (0) (s :n ...)) ...) '(% :k (s :k ...) (0)) {:n '(% :k (s :k ...) (0))})
-         (subset? '(s (% :n (0) (s :n ...)) ...) '(s (% :k (s :k ...) (0)) ...) {:n '(% :k (s :k ...) (0))})
-         (subset? '(% :n (0) (s :n ...)) '((% :k (s :k ...) (0)) ...) {:n '(% :k (s :k ...) (0))})
-         (subset? '(% :k (s :k ...) (0)) '((% :k (s :k ...) (0)) ...) {:n '(% :k (s :k ...) (0))})
-         (subset? '(% :k (s :k ...) (0)) '((% :k (s :k ...) (0)) ...) {:n '(% :k (s :k ...) (0))}))

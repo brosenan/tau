@@ -1,6 +1,7 @@
 * [Exquations](#exquations)
   * [Bindings](#bindings)
   * [Exquation Semantics](#exquation-semantics)
+    * [Types](#types)
     * [Implementation Details](#implementation-details)
 ```clojure
 (ns tau.exquation-test
@@ -111,6 +112,23 @@ that can be represented by this binding_ exists in the set represented by the se
  (subset? '(% :n 0 (s (s :n))) '(% :k (s :k) 0)) => true
  ;; Not every number is even.
  (subset? '(% :n 0 (s :n)) '(% :k (s (s :k)) 0)) => false)
+
+```
+### Types
+
+The symbols `int`, `float` and `string` represent sets of all values (literals) of the corresponding types.
+```clojure
+(fact
+ (subset? 42 'int) => true
+ (subset? 3.141592 'float) => true
+ (subset? "foobar" 'string) => true)
+
+```
+This allows us to define more complex types, such as lists of integers.
+```clojure
+(fact
+ (subset? '(4 6 2 7 2) '(% :l () (int :l ...))) => true
+ (subset? '(4 6 2.5 7 2) '(% :l () (int :l ...))) => false)
 
 ```
 ### Implementation Details

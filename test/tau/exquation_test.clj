@@ -91,6 +91,19 @@
  ;; Not every number is even.
  (subset? '(% :n 0 (s :n)) '(% :k (s (s :k)) 0)) => false)
 
+;; ### Types
+
+;; The symbols `int`, `float` and `string` represent sets of all values (literals) of the corresponding types.
+(fact
+ (subset? 42 'int) => true
+ (subset? 3.141592 'float) => true
+ (subset? "foobar" 'string) => true)
+
+;; This allows us to define more complex types, such as lists of integers.
+(fact
+ (subset? '(4 6 2 7 2) '(% :l () (int :l ...))) => true
+ (subset? '(4 6 2.5 7 2) '(% :l () (int :l ...))) => false)
+
 ;; ### Implementation Details
 
 ;; A 3-parameter version of `subset?` takes a map of inductive assumptions.
