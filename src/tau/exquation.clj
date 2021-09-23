@@ -65,23 +65,34 @@
                                    (recur (vec (rest a)) (vec (rest b)) assumptions))))
      :else (= a b))))
 
+(defn wrap-binding [gen-var maps]
+  (cond
+    (empty? maps) nil
+    (> (count maps) 1) (let [keys (keys (first maps))]
+                         (->> keys
+                              (map (fn [key]
+                                     [key (-> (map key maps)
+                                              (new-binding gen-var))]))
+                              (into {})))
+    :else (first maps)))
+
 (defn match
-  ([pattern x]
-   (match pattern x {}))
-  ([pattern x bindings]
+  ([pattern x gen-var]
+   (match pattern x gen-var {}))
+  ([pattern x gen-var bindings]
    (cond
      (nil? bindings) nil
-     (binding? x) (->> (binding-terms x)
-                       (map #(match pattern % bindings))
-                       (filter #(not (nil? %)))
-                       first)
      (keyword? pattern) (assoc bindings pattern x)
      (and (sequential? pattern)
           (= (count pattern) 2)
-          (= (second pattern) elipsis-sym)) (recur (first pattern) x bindings)
+          (= (second pattern) elipsis-sym)) (recur (first pattern) x gen-var bindings)
      (and (sequential? x)
           (= (count x) 2)
-          (= (second x) elipsis-sym)) (recur pattern (first x) bindings)
+          (= (second x) elipsis-sym)) (recur pattern (first x) gen-var bindings)
+     (binding? x) (->> (binding-terms x)
+                       (map #(match pattern % gen-var bindings))
+                       (filter #(not (nil? %)))
+                       (wrap-binding gen-var))
      (seq? pattern) (cond
                       (not (seq? x)) nil
                       (empty? pattern) (if (empty? x)
@@ -89,9 +100,9 @@
                                          nil)
                       (empty? x) nil
                       :else (->> bindings
-                                 (match (first pattern) (first x))
-                                 (recur (rest pattern) (rest x))))
+                                 (match (first pattern) (first x) gen-var)
+                                 (recur (rest pattern) (rest x) gen-var)))
      (and (vector? pattern)
-          (vector? x)) (recur (seq pattern) (seq x) bindings)
+          (vector? x)) (recur (seq pattern) (seq x) gen-var bindings)
      (= pattern x) bindings
      :else nil)))

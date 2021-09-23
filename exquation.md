@@ -162,40 +162,47 @@ Patterns can be used for _matching_ and _replacing_, where in the former an exqu
 and if it matches it, bindings for the keywords are returned. In the latter, a pattern is provided along with a bindings map.
 The result is an exquation that would provide these bindings if matched against that pattern.
 
-The `match` function takes a pattern and an exquation and returns a bindings map if the pattern matches, or `nil` if not.
+The `match` function takes a pattern, an exquation and a unique variable name generator function, and returns a bindings map if
+the pattern matches, or `nil` if not.
 ```clojure
+(defn gen-var []
+  (let [counter (atom 0)]
+    (fn []
+      (str "v" (swap! counter inc)))))
 (fact
- (match 'foo 'foo) => {}
- (match 'foo 'bar) => nil
- (match :foo 'foo) => {:foo 'foo}
- (match '(foo :bar) '(foo bar)) => {:bar 'bar}
- (match '(foo :bar) '[foo bar]) => nil
- (match '[foo :bar] '(foo bar)) => nil
- (match '(foo :bar) 2) => nil
- (match '(foo :bar) '(foo)) => nil
- (match '(:foo) '(foo bar)) => nil
- (match '[foo :bar] '[foo bar]) => {:bar 'bar}
- (match '[foo :bar] 2) => nil
- (match '[foo :bar] '[foo]) => nil
- (match '[:foo] '[foo bar]) => nil)
+ (let [g (gen-var)]
+   [(g) (g)]) => ["v1" "v2"]
+ (match 'foo 'foo (gen-var)) => {}
+ (match 'foo 'bar (gen-var)) => nil
+ (match :foo 'foo (gen-var)) => {:foo 'foo}
+ (match '(foo :bar) '(foo bar) (gen-var)) => {:bar 'bar}
+ (match '(foo :bar) '[foo bar] (gen-var)) => nil
+ (match '[foo :bar] '(foo bar) (gen-var)) => nil
+ (match '(foo :bar) 2 (gen-var)) => nil
+ (match '(foo :bar) '(foo) (gen-var)) => nil
+ (match '(:foo) '(foo bar) (gen-var)) => nil
+ (match '[foo :bar] '[foo bar] (gen-var)) => {:bar 'bar}
+ (match '[foo :bar] 2 (gen-var)) => nil
+ (match '[foo :bar] '[foo] (gen-var)) => nil
+ (match '[:foo] '[foo bar] (gen-var)) => nil)
 
 ```
 Both patterns and matched exquations can include ellipses at the end of lists and vector. In both cases, they mean that the
 term that comes before tham represents the rest of the list of vector.
 ```clojure
 (fact
- (match '(1 2 :rest ...) '(1 2 3 4)) => {:rest '(3 4)}
- (match '(1 2 :three 4) '(1 2 (3 4) ...)) => {:three 3}
- (match '[1 2 :rest ...] '[1 2 3 4]) => {:rest '(3 4)}
- (match '[1 2 :three 4] '[1 2 (3 4) ...]) => {:three 3})
+ (match '(1 2 :rest ...) '(1 2 3 4) (gen-var)) => {:rest '(3 4)}
+ (match '(1 2 :three 4) '(1 2 (3 4) ...) (gen-var)) => {:three 3}
+ (match '[1 2 :rest ...] '[1 2 3 4] (gen-var)) => {:rest '(3 4)}
+ (match '[1 2 :three 4] '[1 2 (3 4) ...] (gen-var)) => {:three 3})
 
 ```
-When matching a pattern against a binding, every term in the binding is being considered
-and the first match (if found) is returned.
+When matching a pattern against an exquation that contains bindings, the match (if found) represents all possible assignments.
 ```clojure
 (fact
- (match 'foo '(% :x foo bar)) => {}
- (match :foo '(% :x foo bar)) => {:foo 'foo}
- (match '(s (s :x)) '(% :n 0 (s :n))) => {:x 0})
+ (match :foo '(% :x foo bar) (gen-var)) => {:foo '(% :x foo bar)}
+ (match 'foo '(% :x foo bar) (gen-var)) => {}
+ (match '(s (s :x)) '(% :n 0 (s :n)) (gen-var)) => {:x '(% :n 0 (s :n))}
+ (match '(x :y) '(% :v (x 1) (x 2)) (gen-var)) => {:y '(% :v1 1 2)})
 ```
 
