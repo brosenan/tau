@@ -47,4 +47,5 @@
  (subset? 'foo 'foo) => true)
 
 ;; Bindings make things more interesting. A binding `(% :x expr1 expr2 ... exprn)` corresponds to the equation
-;; ![eq-binding-meaning](doc/eq-binding-meaning.png) where ![eq-expri](doc/eq-expri.png) corresponds to `expri`.
+;; ![eq-binding-meaning](https://github.com/brosenan/tau/blob/main/doc/eq-binding-meaning.png?raw=true)
+;; where ![eq-expri](https://github.com/brosenan/tau/blob/main/doc/eq-expri.png?raw=true) corresponds to `expri`.
