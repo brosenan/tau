@@ -1,10 +1,11 @@
 * [Exquations](#exquations)
   * [Bindings](#bindings)
   * [Exquation Semantics](#exquation-semantics)
+    * [Implementation Details](#implementation-details)
 ```clojure
 (ns tau.exquation-test
   (:require [midje.sweet :refer [fact =>]]
-            [tau.exquation :refer [binding? new-binding binding-terms subset?]]))
+            [tau.exquation :refer [binding? new-binding binding-terms subset? bound-var]]))
 
 ```
 # Exquations
@@ -24,6 +25,12 @@ The function `binding?` returns `true` when given a binding s-expression.
  (binding? '(% :x 1 2 3)) => true
  (binding? '1) => false
  (binding? '(foo bar)) => false)
+
+```
+The function `bound-var` returns the keyword placed in the first position of a binding.
+```clojure
+(fact
+ (bound-var '(% :x 1 2 3)) => :x)
 
 ```
 The function `create-binding` takes a collection of terms and a function that generates unique strings
@@ -56,9 +63,62 @@ For such exquations, `subset?` will return `true` if and only if the s-expressio
 ```clojure
 (fact
  (subset? 'foo 'bar) => false
- (subset? 'foo 'foo) => true)
+ (subset? 'foo 'foo) => true
+ (subset? '(foo bar) '(foo bar)) => true
+ (subset? '(foo bar) '(foo baz)) => false
+ (subset? '(foo bar) '[foo bar]) => false
+ (subset? '(foo (bar)) '(foo [bar])) => false
+ (subset? '[foo bar] '[foo bar]) => true
+ (subset? '[foo bar] '(foo bar)) => false
+ (subset? '[foo [bar]] '[foo (bar)]) => false)
 
 ```
 Bindings make things more interesting. A binding `(% :x expr1 expr2 ... exprn)` corresponds to the equation
 ![eq-binding-meaning](https://github.com/brosenan/tau/blob/main/doc/eq-binding-meaning.png?raw=true)
-where ![eq-expri](https://github.com/brosenan/tau/blob/main/doc/eq-expri.png?raw=true) corresponds to `expri`.
+where ![eq-expri](https://github.com/brosenan/tau/blob/main/doc/eq-expri.png?raw=true) corresponds to `expri`,
+which may or may not depend on `:x`.
+
+When given an s-expression as its first argument and a binding as its second argument, `subset?` can be used
+to determine if the s-expression is a member of the set defined by the binding.
+```clojure
+(fact
+ (subset? 'foo '(% :x foo bar)) => true
+ ;; 2 is a natural (peano) number.
+ (subset? '(s (s 0)) '(% :n 0 (s :n))) => true
+ ;; But this is not.
+ (subset? '(s (s 42)) '(% :n 0 (s :n))) => false)
+
+```
+When a binding is given as a first argument to the `subset?` function, it has to check whether _every s-expression
+that can be represented by this binding_ exists in the set represented by the second argument.
+```clojure
+(fact
+ (subset? '(% :x foo bar) 'foo) => false
+ (subset? '(% :x foo bar) '(% :y baz bar foo)) => true
+ ;; Equality of the set of natural numbers.
+ (subset? '(% :n 0 (s :n)) '(% :k (s :k) 0)) => true
+ ;; Every even number is a number.
+ (subset? '(% :n 0 (s (s :n))) '(% :k (s :k) 0)) => true
+ ;; Not every number is even.
+ (subset? '(% :n 0 (s :n)) '(% :k (s (s :k)) 0)) => false)
+
+```
+### Implementation Details
+
+A 3-parameter version of `subset?` takes a map of inductive assumptions.
+For example, the map `{:x 'baz}` means that it is assumed that the binding that defines `:x` is a subset of
+`baz`.
+```clojure
+(fact
+ (subset? '(% :x foo bar) 'baz {:x 'baz}) => true
+ ;; Assumptions trump a real evaluation of the binding on the left-hand side.
+ (subset? '(% :x foo bar) 'foo {:x 'baz}) => false)
+
+```
+A binding is always a subset of a binding of the same bound variable (keyword), regardless of their content
+(the assumption is that the keywords are unique, so same keyword implies same variable).
+```clojure
+(fact
+ (subset? '(% :x foo) '(% :x bar)) => true)
+```
+
