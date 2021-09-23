@@ -4,10 +4,12 @@
     * [Types](#types)
     * [Implementation Details](#implementation-details)
   * [Patterns](#patterns)
+    * [Matching](#matching)
+    * [Replacing](#replacing)
 ```clojure
 (ns tau.exquation-test
   (:require [midje.sweet :refer [fact =>]]
-            [tau.exquation :refer [binding? new-binding binding-terms subset? bound-var match]]))
+            [tau.exquation :refer [binding? new-binding binding-terms subset? bound-var match pattern-replace]]))
 
 ```
 # Exquations
@@ -162,6 +164,8 @@ Patterns can be used for _matching_ and _replacing_, where in the former an exqu
 and if it matches it, bindings for the keywords are returned. In the latter, a pattern is provided along with a bindings map.
 The result is an exquation that would provide these bindings if matched against that pattern.
 
+### Matching
+
 The `match` function takes a pattern, an exquation and a unique variable name generator function, and returns a bindings map if
 the pattern matches, or `nil` if not.
 ```clojure
@@ -204,5 +208,25 @@ When matching a pattern against an exquation that contains bindings, the match (
  (match 'foo '(% :x foo bar) (gen-var)) => {}
  (match '(s (s :x)) '(% :n 0 (s :n)) (gen-var)) => {:x '(% :n 0 (s :n))}
  (match '(x :y) '(% :v (x 1) (x 2)) (gen-var)) => {:y '(% :v1 1 2)})
+
+```
+### Replacing
+
+The function `pattern-replace` takes a pattern and a bindings map, and returns an exquation that results from
+replacing all keywords in the pattern with their corresponding exquations (from the map).
+```clojure
+(fact
+ (pattern-replace 'foo {}) => 'foo
+ (pattern-replace :foo {:foo 'foo}) => 'foo
+ (pattern-replace '(:foo :bar) {:foo 'foo
+                                :bar 'bar}) => '(foo bar)
+ (pattern-replace '(:foo [:bar]) {:foo 'foo
+                                  :bar 'bar}) => '(foo [bar]))
+
+```
+Ellipses work as one may expect.
+```clojure
+(fact
+ (pattern-replace '(1 2 :more ...) {:more '(3 4 5)}) => '(1 2 3 4 5))
 ```
 

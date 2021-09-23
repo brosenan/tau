@@ -2,7 +2,7 @@
   (:require [clojure.walk :as walk]))
 
 (def binding-sym '%)
-(def elipsis-sym '...)
+(def ellipsis-sym '...)
 (def int-sym 'int)
 (def float-sym 'float)
 (def string-sym 'string)
@@ -22,6 +22,11 @@
     (->> terms
          (map #(walk/postwalk-replace {var b} %)))))
 
+(defn ellipsis? [s]
+  (and (sequential? s)
+       (= (count s) 2)
+       (= (second s) ellipsis-sym)))
+
 (defn subset?
   ([a b]
    (subset? a b {}))
@@ -33,12 +38,8 @@
           (float? a)) true
      (and (= b string-sym)
           (string? a)) true
-     (and (sequential? a)
-          (= (count a) 2)
-          (= (second a) elipsis-sym)) (recur (first a) b assumptions)
-     (and (sequential? b)
-          (= (count b) 2)
-          (= (second b) elipsis-sym)) (recur a (first b) assumptions)
+     (ellipsis? a) (recur (first a) b assumptions)
+     (ellipsis? b) (recur a (first b) assumptions)
      (binding? a) (cond
                     (and (binding? b)
                          (= (bound-var a) (bound-var b))) true
@@ -83,12 +84,8 @@
    (cond
      (nil? bindings) nil
      (keyword? pattern) (assoc bindings pattern x)
-     (and (sequential? pattern)
-          (= (count pattern) 2)
-          (= (second pattern) elipsis-sym)) (recur (first pattern) x gen-var bindings)
-     (and (sequential? x)
-          (= (count x) 2)
-          (= (second x) elipsis-sym)) (recur pattern (first x) gen-var bindings)
+     (ellipsis? pattern) (recur (first pattern) x gen-var bindings)
+     (ellipsis? x) (recur pattern (first x) gen-var bindings)
      (binding? x) (->> (binding-terms x)
                        (map #(match pattern % gen-var bindings))
                        (filter #(not (nil? %)))
@@ -106,3 +103,14 @@
           (vector? x)) (recur (seq pattern) (seq x) gen-var bindings)
      (= pattern x) bindings
      :else nil)))
+
+(defn pattern-replace [pattern bindmap]
+  (cond
+    (ellipsis? pattern) (recur (first pattern) bindmap)
+    (seq? pattern) (if (empty? pattern)
+                     pattern
+                     (cons (pattern-replace (first pattern) bindmap)
+                           (pattern-replace (rest pattern) bindmap)))
+    (vector? pattern) (vec (pattern-replace (seq pattern) bindmap))
+    (contains? bindmap pattern) (bindmap pattern)
+    :else pattern))
