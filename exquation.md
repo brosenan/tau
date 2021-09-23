@@ -3,10 +3,11 @@
   * [Exquation Semantics](#exquation-semantics)
     * [Types](#types)
     * [Implementation Details](#implementation-details)
+  * [Patterns](#patterns)
 ```clojure
 (ns tau.exquation-test
   (:require [midje.sweet :refer [fact =>]]
-            [tau.exquation :refer [binding? new-binding binding-terms subset? bound-var]]))
+            [tau.exquation :refer [binding? new-binding binding-terms subset? bound-var match]]))
 
 ```
 # Exquations
@@ -76,7 +77,7 @@ For such exquations, `subset?` will return `true` if and only if the s-expressio
  (subset? '[foo [bar]] '[foo (bar)]) => false)
 
 ```
-Elipsis (...) at the end of a list/vector mean that the element right before it
+Ellipsis (...) at the end of a list/vector mean that the element right before it
 represents the rest of the list/vector.
 ```clojure
 (fact
@@ -130,7 +131,9 @@ This allows us to define more complex types, such as lists of integers.
 ```clojure
 (fact
  (subset? '(4 6 2 7 2) '(% :l () (int :l ...))) => true
- (subset? '(4 6 2.5 7 2) '(% :l () (int :l ...))) => false)
+ (subset? '(4 6 2.5 7 2) '(% :l () (int :l ...))) => false
+ ;; An infinite list of 1's is a list of integers.
+ (subset? '(% :x (1 :x ...)) '(% :l () (int :l ...))) => true)
 
 ```
 ### Implementation Details
@@ -150,5 +153,49 @@ A binding is always a subset of a binding of the same bound variable (keyword), 
 ```clojure
 (fact
  (subset? '(% :x foo) '(% :x bar)) => true)
+
+```
+## Patterns
+
+A _pattern_ is an s-expression that includes unbound keywords (i.e., keywords that are not defined by an overwrapping binding).
+Patterns can be used for _matching_ and _replacing_, where in the former an exquation is matched agaist a pattern
+and if it matches it, bindings for the keywords are returned. In the latter, a pattern is provided along with a bindings map.
+The result is an exquation that would provide these bindings if matched against that pattern.
+
+The `match` function takes a pattern and an exquation and returns a bindings map if the pattern matches, or `nil` if not.
+```clojure
+(fact
+ (match 'foo 'foo) => {}
+ (match 'foo 'bar) => nil
+ (match :foo 'foo) => {:foo 'foo}
+ (match '(foo :bar) '(foo bar)) => {:bar 'bar}
+ (match '(foo :bar) '[foo bar]) => nil
+ (match '[foo :bar] '(foo bar)) => nil
+ (match '(foo :bar) 2) => nil
+ (match '(foo :bar) '(foo)) => nil
+ (match '(:foo) '(foo bar)) => nil
+ (match '[foo :bar] '[foo bar]) => {:bar 'bar}
+ (match '[foo :bar] 2) => nil
+ (match '[foo :bar] '[foo]) => nil
+ (match '[:foo] '[foo bar]) => nil)
+
+```
+Both patterns and matched exquations can include ellipses at the end of lists and vector. In both cases, they mean that the
+term that comes before tham represents the rest of the list of vector.
+```clojure
+(fact
+ (match '(1 2 :rest ...) '(1 2 3 4)) => {:rest '(3 4)}
+ (match '(1 2 :three 4) '(1 2 (3 4) ...)) => {:three 3}
+ (match '[1 2 :rest ...] '[1 2 3 4]) => {:rest '(3 4)}
+ (match '[1 2 :three 4] '[1 2 (3 4) ...]) => {:three 3})
+
+```
+When matching a pattern against a binding, every term in the binding is being considered
+and the first match (if found) is returned.
+```clojure
+(fact
+ (match 'foo '(% :x foo bar)) => {}
+ (match :foo '(% :x foo bar)) => {:foo 'foo}
+ (match '(s (s :x)) '(% :n 0 (s :n))) => {:x 0})
 ```
 

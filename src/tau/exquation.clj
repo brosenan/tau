@@ -64,3 +64,34 @@
                         :else (and (subset? (first a) (first b) assumptions)
                                    (recur (vec (rest a)) (vec (rest b)) assumptions))))
      :else (= a b))))
+
+(defn match
+  ([pattern x]
+   (match pattern x {}))
+  ([pattern x bindings]
+   (cond
+     (nil? bindings) nil
+     (binding? x) (->> (binding-terms x)
+                       (map #(match pattern % bindings))
+                       (filter #(not (nil? %)))
+                       first)
+     (keyword? pattern) (assoc bindings pattern x)
+     (and (sequential? pattern)
+          (= (count pattern) 2)
+          (= (second pattern) elipsis-sym)) (recur (first pattern) x bindings)
+     (and (sequential? x)
+          (= (count x) 2)
+          (= (second x) elipsis-sym)) (recur pattern (first x) bindings)
+     (seq? pattern) (cond
+                      (not (seq? x)) nil
+                      (empty? pattern) (if (empty? x)
+                                         bindings
+                                         nil)
+                      (empty? x) nil
+                      :else (->> bindings
+                                 (match (first pattern) (first x))
+                                 (recur (rest pattern) (rest x))))
+     (and (vector? pattern)
+          (vector? x)) (recur (seq pattern) (seq x) bindings)
+     (= pattern x) bindings
+     :else nil)))
