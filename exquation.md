@@ -60,5 +60,4 @@ For such exquations, `subset?` will return `true` if and only if the s-expressio
 
 ```
 Bindings make things more interesting. A binding `(% :x expr1 expr2 ... exprn)` corresponds to the equation
-![equation](http://www.sciweavers.org/tex2img.php?eq=x%3Df_%7B1%7D%28x%29%20%5Ccup%20f_%7B2%7D%28x%29%20%5Ccup%20...%20%5Ccup%20f_%7Bn%7D%28x%29&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=0)
-where ![img](http://www.sciweavers.org/tex2img.php?eq=f_i%28x%29&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=0) corresponds to `expri`.
+![eq-binding-meaning](../doc/eq-binding-meaning.png) where ![eq-expri](../doc/eq-expri.png) corresponds to `expri`.
