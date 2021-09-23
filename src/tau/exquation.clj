@@ -2,6 +2,7 @@
   (:require [clojure.walk :as walk]))
 
 (def binding-sym '%)
+(def elipsis-sym '...)
 
 (defn binding? [expr]
   (and (seq? expr)
@@ -23,6 +24,12 @@
    (subset? a b {}))
   ([a b assumptions]
    (cond
+     (and (seq? a)
+          (= (count a) 2)
+          (= (second a) elipsis-sym)) (subset? (first a) b assumptions)
+     (and (seq? b)
+          (= (count b) 2)
+          (= (second b) elipsis-sym)) (subset? a (first b) assumptions)
      (binding? a) (cond
                     (and (binding? b)
                          (= (bound-var a) (bound-var b))) true
@@ -35,7 +42,17 @@
                        (some identity)
                        some?)
      (seq? a) (and (seq? b)
-                   (every? identity (map #(subset? %1 %2 assumptions) a b)))
+                   (cond
+                     (empty? a) (empty? b)
+                     :else (and (subset? (first a) (first b) assumptions)
+                                (subset? (rest a) (rest b) assumptions))))
      (vector? a) (and (vector? b)
-                      (every? identity (map #(subset? %1 %2 assumptions) a b)))
+                      (subset? (seq a) (seq b) assumptions))
      :else (= a b))))
+
+(comment (subset? '(% :n (0) (s :n ...)) '(% :k (s :k ...) (0)) {})
+         (subset? '(s (% :n (0) (s :n ...)) ...) '(% :k (s :k ...) (0)) {:n '(% :k (s :k ...) (0))})
+         (subset? '(s (% :n (0) (s :n ...)) ...) '(s (% :k (s :k ...) (0)) ...) {:n '(% :k (s :k ...) (0))})
+         (subset? '(% :n (0) (s :n ...)) '((% :k (s :k ...) (0)) ...) {:n '(% :k (s :k ...) (0))})
+         (subset? '(% :k (s :k ...) (0)) '((% :k (s :k ...) (0)) ...) {:n '(% :k (s :k ...) (0))})
+         (subset? '(% :k (s :k ...) (0)) '((% :k (s :k ...) (0)) ...) {:n '(% :k (s :k ...) (0))}))

@@ -50,12 +50,20 @@
  (subset? 'foo 'bar) => false
  (subset? 'foo 'foo) => true
  (subset? '(foo bar) '(foo bar)) => true
+ (subset? '(foo bar) '(foo bar baz)) => false
+ (subset? '(foo bar baz) '(foo bar)) => false
  (subset? '(foo bar) '(foo baz)) => false
  (subset? '(foo bar) '[foo bar]) => false
  (subset? '(foo (bar)) '(foo [bar])) => false
  (subset? '[foo bar] '[foo bar]) => true
  (subset? '[foo bar] '(foo bar)) => false
  (subset? '[foo [bar]] '[foo (bar)]) => false)
+
+;; Elipsis (...) at the end of a list/vector mean that the element right before it
+;; represents the rest of the list/vector.
+(fact
+ (subset? '(a b (c d) ...) '(a b c d)) => true
+ (subset? '(a b c d) '(a b (c d) ...)) => true)
 
 ;; Bindings make things more interesting. A binding `(% :x expr1 expr2 ... exprn)` corresponds to the equation
 ;; ![eq-binding-meaning](https://github.com/brosenan/tau/blob/main/doc/eq-binding-meaning.png?raw=true)
