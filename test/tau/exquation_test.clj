@@ -63,7 +63,9 @@
 ;; represents the rest of the list/vector.
 (fact
  (subset? '(a b (c d) ...) '(a b c d)) => true
- (subset? '(a b c d) '(a b (c d) ...)) => true)
+ (subset? '(a b c d) '(a b (c d) ...)) => true
+ (subset? '[a b [c d] ...] '[a b c d]) => true
+(subset? '[a b c d] '[a b [c d] ...]) => true)
 
 ;; Bindings make things more interesting. A binding `(% :x expr1 expr2 ... exprn)` corresponds to the equation
 ;; ![eq-binding-meaning](https://github.com/brosenan/tau/blob/main/doc/eq-binding-meaning.png?raw=true)

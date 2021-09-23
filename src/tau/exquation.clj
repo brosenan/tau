@@ -33,10 +33,10 @@
           (float? a)) true
      (and (= b string-sym)
           (string? a)) true
-     (and (seq? a)
+     (and (sequential? a)
           (= (count a) 2)
           (= (second a) elipsis-sym)) (subset? (first a) b assumptions)
-     (and (seq? b)
+     (and (sequential? b)
           (= (count b) 2)
           (= (second b) elipsis-sym)) (subset? a (first b) assumptions)
      (binding? a) (cond
@@ -56,5 +56,8 @@
                      :else (and (subset? (first a) (first b) assumptions)
                                 (subset? (rest a) (rest b) assumptions))))
      (vector? a) (and (vector? b)
-                      (subset? (seq a) (seq b) assumptions))
+                      (cond
+                        (empty? a) (empty? b)
+                        :else (and (subset? (first a) (first b) assumptions)
+                                   (subset? (vec (rest a)) (vec (rest b)) assumptions))))
      :else (= a b))))
