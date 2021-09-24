@@ -1,6 +1,6 @@
 (ns tau.exquation-test
   (:require [midje.sweet :refer [fact =>]]
-            [tau.exquation :refer [binding? new-binding binding-terms subset? bound-var match pattern-replace]]))
+            [tau.exquation :refer [binding? new-binding binding-terms subset? subset-conds bound-var match pattern-replace]]))
 
 ;; # Exquations
 
@@ -108,15 +108,51 @@
  ;; An infinite list of 1's is a list of integers.
  (subset? '(% :x (1 :x ...)) '(% :l () (int :l ...))) => true)
 
+;; ### Exquation Patterns
+
+;; While valid exquations do not contain keywords except within bindings that define them, arbitrary keywords may appear
+;; in _exquation patterns_, where they represent an unknown part of the exquation.
+
+;; The semantics of exquation patterns is defined by the `subset-conds` function, which takes two takes two exquation patterns
+;; as arguments. If the first _can be_ a subset of the second under some conditinos regarding the keywords on either side,
+;; the function will return a vector of these conditions. If they cannot, it returns `nil`.
+
+;; When given regular (non-pattern) exquations, `subset-conds` behaves like `subset?`, returning `[]` in place of `true` and
+;; `nil` in place of `false`.
+(fact
+ (subset-conds '(4 6 2 7 2) '(% :l () (int :l ...))) => []
+ (subset-conds '(4 6 2.5 7 2) '(% :l () (int :l ...))) => nil)
+
+;; If we take an exquation that is a subset of another, and replace a part of it with a keyword,
+;; `subset-conds` will return a condition under which the pattern would represent a subset.
+(fact
+ (subset-conds :x 'x) => '[[:x x]]
+ (subset-conds '(4 6 :x 7 2) '(% :l () (int :l ...))) => '[[:x int]]
+ (subset-conds '(4 6 :xs ...) '(% :l () (int :l ...))) => '[[:xs (% :l () (int :l ...))]]
+ (subset-conds '(4 6 :x 7 :y) '(% :l () (int :l ...))) => '[[:x int] [:y int]])
+
+;; Taking the last example, it means that for `(4 6 :x 7 :y)` to be a list of integers, `:x` has to be _a subset of_
+;; `int` and so does `y`.
+
+;; Keywords may also appear in the second argument.
+(fact
+ (subset-conds 'x :x) => '[[x :x]]
+ (subset-conds '(% :k () (int :k ...)) '(% :l () (:t :l ...))) => '[[int :t]]
+ (subset-conds '(1 2 3) '(% :l () (:t :l ...))) => '[[1 :t] [2 :t] [3 :t]])
+
+;; Taking the last example, for `(1 2 3)` to be a list of type `:t`, our selection of `:t` must be such that all of
+;; {1}, {2} and {3} (singleton sets) need to be subsets of `:t`.
+
 ;; ### Implementation Details
 
 ;; A 3-parameter version of `subset?` takes a map of inductive assumptions.
 ;; For example, the map `{:x 'baz}` means that it is assumed that the binding that defines `:x` is a subset of
 ;; `baz`.
-(fact
- (subset? '(% :x foo bar) 'baz {:x 'baz}) => true
+(comment (fact
+          (subset? '(% :x foo bar) 'baz {:x 'baz}) => true
  ;; Assumptions trump a real evaluation of the binding on the left-hand side.
- (subset? '(% :x foo bar) 'foo {:x 'baz}) => false)
+          (subset? '(% :x foo bar) 'foo {:x 'baz}) => false)
+         )
 
 ;; A binding is always a subset of a binding of the same bound variable (keyword), regardless of their content
 ;; (the assumption is that the keywords are unique, so same keyword implies same variable).

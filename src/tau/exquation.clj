@@ -27,44 +27,66 @@
        (= (count s) 2)
        (= (second s) ellipsis-sym)))
 
-(defn subset?
+(declare subset-conds)
+
+(defn- unify-all [as b assumptions conds]
+  (if (empty? as)
+    conds
+    (->> conds
+         (subset-conds (first as) b assumptions)
+         (unify-all (rest as) b assumptions))))
+
+(defn subset-conds
   ([a b]
-   (subset? a b {}))
-  ([a b assumptions]
+   (subset-conds a b {} []))
+  ([a b assumptions conds]
    (cond
+     (nil? conds) nil
      (and (= b int-sym)
-          (int? a)) true
+          (int? a)) conds
      (and (= b float-sym)
-          (float? a)) true
+          (float? a)) conds
      (and (= b string-sym)
-          (string? a)) true
-     (ellipsis? a) (recur (first a) b assumptions)
-     (ellipsis? b) (recur a (first b) assumptions)
+          (string? a)) conds
+     (ellipsis? a) (recur (first a) b assumptions conds)
+     (ellipsis? b) (recur a (first b) assumptions conds)
+     (or (keyword? a)
+         (keyword? b)) (-> conds
+                           (conj [a b]))
      (binding? a) (cond
                     (and (binding? b)
-                         (= (bound-var a) (bound-var b))) true
-                    (contains? assumptions (bound-var a)) (recur (assumptions (bound-var a)) b assumptions)
+                         (= (bound-var a) (bound-var b))) conds
+                    (contains? assumptions (bound-var a)) (recur (assumptions (bound-var a)) b assumptions conds)
                     :else (let [assumptions (assoc assumptions (bound-var a) b)]
-                            (->> (binding-terms a)
-                                 (map #(subset? % b assumptions))
-                                 (every? identity))))
+                            (unify-all (binding-terms a) b assumptions conds)))
      (binding? b) (->> (binding-terms b)
-                       (map #(subset? a % assumptions))
-                       (some identity)
-                       some?)
-     (seq? a) (and (seq? b)
-                   (cond
-                     (empty? a) (empty? b)
-                     (empty? b) false
-                     :else (and (subset? (first a) (first b) assumptions)
-                                (recur (rest a) (rest b) assumptions))))
-     (vector? a) (and (vector? b)
-                      (cond
-                        (empty? a) (empty? b)
-                        (empty? b) false
-                        :else (and (subset? (first a) (first b) assumptions)
-                                   (recur (vec (rest a)) (vec (rest b)) assumptions))))
-     :else (= a b))))
+                       (map #(subset-conds a % assumptions conds))
+                       (some identity))  ;; Need to combine the different conditions
+     (seq? a) (cond
+                (not (seq? b)) nil
+                (empty? a) (if (empty? b)
+                             conds
+                             nil)
+                (empty? b) nil
+                :else (->> conds
+                           (subset-conds (first a) (first b) assumptions)
+                           (recur (rest a) (rest b) assumptions)))
+     (vector? a) (cond
+                   (not (vector? b)) nil
+                   (empty? a) (if (empty? b)
+                                conds
+                                nil)
+                   (empty? b) nil
+                   :else (and (subset-conds (first a) (first b) assumptions conds)
+                              (recur (vec (rest a)) (vec (rest b)) assumptions conds)))
+     :else (if (= a b)
+             conds
+             nil))))
+
+(defn subset? [a b]
+  (let [conds (subset-conds a b)]
+    (and (not (nil? conds))
+         (empty? conds ))))
 
 (defn wrap-binding [gen-var maps]
   (cond
