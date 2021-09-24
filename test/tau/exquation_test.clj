@@ -145,14 +145,13 @@
 
 ;; ### Implementation Details
 
-;; A 3-parameter version of `subset?` takes a map of inductive assumptions.
-;; For example, the map `{:x 'baz}` means that it is assumed that the binding that defines `:x` is a subset of
+;; A 4-parameter version of `subset-conds` takes a map of induction assumptions and the initial list of conditions.
+;; Induction assumptions work such that the map `{:x 'baz}` means that it is assumed that the binding that defines `:x` is a subset of
 ;; `baz`.
-(comment (fact
-          (subset? '(% :x foo bar) 'baz {:x 'baz}) => true
+(fact
+ (subset-conds '(% :x foo bar) 'baz {:x 'baz} [[:some :cond]]) => [[:some :cond]]
  ;; Assumptions trump a real evaluation of the binding on the left-hand side.
-          (subset? '(% :x foo bar) 'foo {:x 'baz}) => false)
-         )
+ (subset-conds '(% :x foo bar) 'foo {:x 'baz} []) => nil)
 
 ;; A binding is always a subset of a binding of the same bound variable (keyword), regardless of their content
 ;; (the assumption is that the keywords are unique, so same keyword implies same variable).
