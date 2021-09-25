@@ -77,8 +77,9 @@
                                 conds
                                 nil)
                    (empty? b) nil
-                   :else (and (subset-conds (first a) (first b) assumptions conds)
-                              (recur (vec (rest a)) (vec (rest b)) assumptions conds)))
+                   :else (->> conds
+                              (subset-conds (first a) (first b) assumptions)
+                              (recur (vec (rest a)) (vec (rest b)) assumptions)))
      :else (if (= a b)
              conds
              nil))))
@@ -99,32 +100,12 @@
                               (into {})))
     :else (first maps)))
 
-(defn match
-  ([pattern x gen-var]
-   (match pattern x gen-var {}))
-  ([pattern x gen-var bindings]
-   (cond
-     (nil? bindings) nil
-     (keyword? pattern) (assoc bindings pattern x)
-     (ellipsis? pattern) (recur (first pattern) x gen-var bindings)
-     (ellipsis? x) (recur pattern (first x) gen-var bindings)
-     (binding? x) (->> (binding-terms x)
-                       (map #(match pattern % gen-var bindings))
-                       (filter #(not (nil? %)))
-                       (wrap-binding gen-var))
-     (seq? pattern) (cond
-                      (not (seq? x)) nil
-                      (empty? pattern) (if (empty? x)
-                                         bindings
-                                         nil)
-                      (empty? x) nil
-                      :else (->> bindings
-                                 (match (first pattern) (first x) gen-var)
-                                 (recur (rest pattern) (rest x) gen-var)))
-     (and (vector? pattern)
-          (vector? x)) (recur (seq pattern) (seq x) gen-var bindings)
-     (= pattern x) bindings
-     :else nil)))
+(defn match [pattern x gen-var]
+  (let [conds (subset-conds pattern x)]
+    (if (nil? conds)
+      nil
+      (->> conds
+           (into {})))))
 
 (defn pattern-replace [pattern bindmap]
   (cond
