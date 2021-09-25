@@ -7,10 +7,12 @@
   * [Patterns](#patterns)
     * [Matching](#matching)
     * [Replacing](#replacing)
+  * [Condition Terms](#condition-terms)
 ```clojure
 (ns tau.exquation-test
   (:require [midje.sweet :refer [fact =>]]
-            [tau.exquation :refer [binding? new-binding binding-terms subset? subset-conds bound-var match pattern-replace]]))
+            [tau.exquation :refer [binding? new-binding binding-terms subset? subset-conds 
+                                   bound-var match pattern-replace always-true? subset-term apply-op]]))
 
 ```
 # Exquations
@@ -273,5 +275,40 @@ Ellipses work as one may expect.
 ```clojure
 (fact
  (pattern-replace '(1 2 :more ...) {:more '(3 4 5)}) => '(1 2 3 4 5))
+
+```
+## Condition Terms
+
+`subset-conds` returns conditions for one exquation to be a subset of another as a Boolean term.
+These are either Boolean values (`true` or `false`) or lists starting with a symbol (either `subset`,
+`or` or `and`) where the rest of the elements are Boolean terms themselves.
+
+The function `always-true?` returns `true` if the given Boolean term evaluates to true regardless
+of any `subset` clauses, or `false` otherwise.
+```clojure
+(fact
+ (always-true? true) => true
+ (always-true? false) => false
+ (always-true? '(subset :foo :bar)) => false
+ (always-true? '(and)) => true
+ (always-true? '(and (subset :foo :bar))) => false
+ (always-true? '(and (and) true)) => true
+ (always-true? '(or)) => false
+ (always-true? '(or (and) (or))) => true)
+
+```
+The function `subset-term` constructs a Boolean term requiring that its first argument be a subset of its second.
+```clojure
+(fact
+ (subset-term :foo 'bar) => '(subset :foo bar))
+
+```
+The function `apply-op` takes a collection of Boolean terms and returns a term that applies the given operator (a symbol) to them.
+In the case of a single element, the operator is omitted and the single element is returned.
+```clojure
+(fact
+ (apply-op 'and [(subset-term :foo 'bar)]) => '(subset :foo bar)
+ (apply-op 'and [(subset-term :foo 'bar)
+                 (subset-term :bar 'foo)]) => '(and (subset :foo bar) (subset :bar foo)))
 ```
 
