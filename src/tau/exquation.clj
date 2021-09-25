@@ -6,6 +6,8 @@
 (def int-sym 'int)
 (def float-sym 'float)
 (def string-sym 'string)
+(def universal-sym '_)
+(def emptyset-sym 'void)
 
 (defn binding? [expr]
   (and (seq? expr)
@@ -48,6 +50,8 @@
           (float? a)) conds
      (and (= b string-sym)
           (string? a)) conds
+     (= b universal-sym) conds
+     (= a emptyset-sym) conds
      (ellipsis? a) (recur (first a) b assumptions conds)
      (ellipsis? b) (recur a (first b) assumptions conds)
      (or (keyword? a)

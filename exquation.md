@@ -2,6 +2,7 @@
   * [Bindings](#bindings)
   * [Exquation Semantics](#exquation-semantics)
     * [Types](#types)
+    * [Univeral and Empty Sets](#univeral-and-empty-sets)
     * [Exquation Patterns](#exquation-patterns)
     * [Implementation Details](#implementation-details)
   * [Patterns](#patterns)
@@ -139,6 +140,20 @@ This allows us to define more complex types, such as lists of integers.
  (subset? '(4 6 2.5 7 2) '(% :l () (int :l ...))) => false
  ;; An infinite list of 1's is a list of integers.
  (subset? '(% :x (1 :x ...)) '(% :l () (int :l ...))) => true)
+
+```
+### Univeral and Empty Sets
+
+The symbol `_` represents the univeral set. Every exquation represents a subset of it.
+```clojure
+(fact
+ (subset? '(1 2 3) '_) => true)
+
+```
+The symbol `void` represents the empty set. It is a subset of every set.
+```clojure
+(fact
+ (subset? 'void 'int) => true)
 
 ```
 ### Exquation Patterns

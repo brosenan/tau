@@ -109,6 +109,16 @@
  ;; An infinite list of 1's is a list of integers.
  (subset? '(% :x (1 :x ...)) '(% :l () (int :l ...))) => true)
 
+;; ### Univeral and Empty Sets
+
+;; The symbol `_` represents the univeral set. Every exquation represents a subset of it.
+(fact
+ (subset? '(1 2 3) '_) => true)
+
+;; The symbol `void` represents the empty set. It is a subset of every set.
+(fact
+ (subset? 'void 'int) => true)
+
 ;; ### Exquation Patterns
 
 ;; While valid exquations do not contain keywords except within bindings that define them, arbitrary keywords may appear
