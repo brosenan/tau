@@ -142,3 +142,15 @@
   (if (= (count terms) 1)
     (first terms)
     (concat [op] terms)))
+
+(defn intersect-approx [a b]
+  (cond
+    (subset? a b) a
+    (subset? b a) b
+    :else emptyset-sym))
+
+(defn union [a b gen-var]
+  (cond
+    (subset? a b) b
+    (subset? b a) a
+    :else (new-binding [a b] gen-var)))

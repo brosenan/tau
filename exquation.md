@@ -4,6 +4,7 @@
     * [Types](#types)
     * [Univeral and Empty Sets](#univeral-and-empty-sets)
     * [Exquation Patterns](#exquation-patterns)
+    * [Union and Intersection](#union-and-intersection)
     * [Implementation Details](#implementation-details)
   * [Patterns](#patterns)
     * [Matching](#matching)
@@ -13,7 +14,8 @@
 (ns tau.exquation-test
   (:require [midje.sweet :refer [fact =>]]
             [tau.exquation :refer [binding? new-binding binding-terms subset? subset-conds 
-                                   bound-var match pattern-replace always-true? subset-term apply-op]]))
+                                   bound-var match pattern-replace always-true? subset-term
+                                   apply-op intersect-approx union]]))
 
 ```
 # Exquations
@@ -197,6 +199,34 @@ Keywords may also appear in the second argument.
 Taking the last example, for `(1 2 3)` to be a list of type `:t`, our selection of `:t` must be such that all of
 {1}, {2} and {3} (singleton sets) need to be subsets of `:t`.
 
+### Union and Intersection
+
+By using `subset?`, we can approximate the union and intersection operators on exquations.
+
+By default, for two exquations that do not have a subset relationship between them, we approximate their intersection to be
+the empty set `void`.
+```clojure
+(fact
+ (intersect-approx 'int 'float) => 'void)
+
+```
+If there is a subset relationship between the two, the subset is the intersection.
+```clojure
+(fact
+ (intersect-approx 3 'int) => 3
+ (intersect-approx 'int 3) => 3)
+
+```
+With union we can be more exact, as, in the case where the two exquations do not have a subset relationship, we can always
+create a new binding with both of them as alternatives, generating a union of the two. However, to do this, the `union` function
+needs to receive a `gen-sym` function to generate names for bindings it creates.
+```clojure
+(fact
+ (union 'int 3 (constantly "v001")) => 'int
+ (union 3 'int (constantly "v001")) => 'int
+ (union 'int 'float (constantly "v001")) => '(% :v001 int float))
+
+```
 ### Implementation Details
 
 A 4-parameter version of `subset-conds` takes a map of induction assumptions and the initial list of conditions.
