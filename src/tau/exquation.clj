@@ -143,14 +143,20 @@
     (first terms)
     (concat [op] terms)))
 
-(defn intersect-approx [a b]
-  (cond
-    (subset? a b) a
-    (subset? b a) b
-    :else emptyset-sym))
+(defn intersect-approx
+  ([a b]
+   (cond
+     (subset? a b) a
+     (subset? b a) b
+     :else emptyset-sym))
+  ([a b c & ds]
+   (apply intersect-approx (intersect-approx a b) c ds)))
 
-(defn union [a b gen-var]
-  (cond
-    (subset? a b) b
-    (subset? b a) a
-    :else (new-binding [a b] gen-var)))
+(defn union
+  ([gen-var a b]
+   (cond
+     (subset? a b) b
+     (subset? b a) a
+     :else (new-binding [a b] gen-var)))
+  ([gen-var a b c & ds]
+   (apply union gen-var (union gen-var a b) c ds)))
