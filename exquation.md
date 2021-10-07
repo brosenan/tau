@@ -217,14 +217,26 @@ If there is a subset relationship between the two, the subset is the intersectio
  (intersect-approx 'int 3) => 3)
 
 ```
+`intersect-approx` is associative.
+```clojure
+(fact
+ (intersect-approx 'int 3 '_) => 3)
+
+```
 With union we can be more exact, as, in the case where the two exquations do not have a subset relationship, we can always
 create a new binding with both of them as alternatives, generating a union of the two. However, to do this, the `union` function
 needs to receive a `gen-sym` function to generate names for bindings it creates.
 ```clojure
 (fact
- (union 'int 3 (constantly "v001")) => 'int
- (union 3 'int (constantly "v001")) => 'int
- (union 'int 'float (constantly "v001")) => '(% :v001 int float))
+ (union (constantly "v001") 'int 3) => 'int
+ (union (constantly "v001") 3 'int) => 'int
+ (union (constantly "v001") 'int 'float) => '(% :v001 int float))
+
+```
+`union` is associative.
+```clojure
+(fact
+ (union (constantly "v001") 1 2 3 'int 4) => 'int)
 
 ```
 ### Implementation Details
